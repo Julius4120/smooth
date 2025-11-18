@@ -1,0 +1,119 @@
+document.addEventListener("DOMContentLoaded", () => {
+
+    // Initialize a new Lenis instance for smooth scrolling
+    const lenis = new Lenis();
+
+    // Synchronize Lenis scrolling with GSAP's ScrollTrigger plugin
+    lenis.on('scroll', ScrollTrigger.update);
+
+    // Add Lenis's requestAnimationFrame (raf) method to GSAP's ticker
+    // This ensures Lenis's smooth scroll animation updates on each GSAP tick
+    gsap.ticker.add((time) => {
+    lenis.raf(time * 1000); // Convert time from seconds to milliseconds
+    });
+
+    // Disable lag smoothing in GSAP to prevent any delay in scroll animations
+    gsap.ticker.lagSmoothing(0);
+
+    let spotlightImgFinalPos = [
+        [-140, -140],
+        [40, -130],
+        [-160, 40],
+        [20, 30],
+    ];
+
+    if (window.innerWidth < 768) {
+        spotlightImgFinalPos = [
+                [-110, -140],   // Box 1: top-left (closer to center)
+                [20, -80],    // Box 2: top-right
+                [-120, 70],    // Box 3: bottom-left  
+                [30, 100],     // Box 4: bottom-right
+            ];
+    };
+
+    const spotlightImages = document.querySelectorAll(".spotlight-img");
+    ScrollTrigger.create({
+        trigger: ".spotlight",
+        start: 'top top',
+        end: `${window.innerHeight * 3}px`,
+        pin: true,
+        pinSpacing: true,
+        scrub: 1,
+        onUpdate: (self) => {
+            const progress = self.progress;
+
+            const initialRotations = [5, -3, 3.5, -1];
+            const phaseOneStartOffsets = [0, 0.1, 0.2, 0.3]
+
+            spotlightImages.forEach((img, index) => {
+                const initialRotation = initialRotations[index];
+                const phase1Start = phaseOneStartOffsets[index];
+                const phase1End = Math.min(
+                    phase1Start + (0.45 - phase1Start) * 0.9,
+                    0.45
+                );
+
+                let x = -50;
+                let y, rotation;
+
+                if (progress < phase1Start) {
+                    y = 200;
+                    rotation = initialRotation;
+                } else if (progress <= 0.45) {
+                    let  phase1Progress;
+
+                    if (progress >= phase1End) {
+                        phase1Progress = 1;
+                    } else {
+                        const linearProgress = (progress - phase1Start) / (phase1End - phase1Start);
+                        phase1Progress = 1 - Math.pow(1 - linearProgress, 3);
+                    }
+
+                    y = 200 - phase1Progress * 250;
+                    rotation = initialRotation;
+                } else {
+                    y = -50;
+                    rotation = initialRotation;
+                }
+
+                // phase 1 ends
+
+                const phaseTwoStartOffsets = [0.5, 0.55, 0.6, 0.65];
+                const phase2Start = phaseTwoStartOffsets[index];
+                const phase2End = Math.min(
+                    phase2Start + (0.95 - phase2Start) * 0.9,
+                    0.95
+                );
+
+                const finalX = spotlightImgFinalPos[index][0];
+                const finalY = spotlightImgFinalPos[index][1];
+
+                if (progress >= phase2Start && progress <= 0.95) {
+                    let phase2Progress;
+
+                    if (progress >= phase2End) {
+                        phase2Progress = 1;
+                    } else {
+                        const linearProgress = (progress - phase2Start) / (phase2End - phase2Start);
+                        phase2Progress = 1 - Math.pow(1 - linearProgress, 3);
+                    }
+
+                    x = -50 + (finalX + 50) * phase2Progress;
+                    y = -50 + (finalY + 50) * phase2Progress;
+                    rotation = initialRotation * (1 - phase2Progress);
+
+                } else if (progress > 0.95) {
+                    x = finalX;
+                    y = finalY;
+                    rotation = 0;
+                }
+
+
+                gsap.set(img, {
+                    transform: `translate(${x}%, ${y}%) rotate(${rotation}deg)`,
+                });
+            });
+        }
+    })
+
+});
